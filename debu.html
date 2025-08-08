@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Broke? 🐞</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #16213e;
+            --accent-color: #e94560;
+            --secondary-accent: #0f3460;
+            --text-color: #f0f0f0;
+            --success-color: #38b2ac;
+            --error-color: #f56565;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --border-radius: 12px;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--primary-color);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px var(--shadow-color);
+            transition: transform 0.3s ease;
+        }
+        h1, h2 {
+            text-align: center;
+            color: var(--accent-color);
+            font-weight: 800;
+            margin-top: 0;
+        }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 1.8rem; }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        button, .mcq-option label {
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px var(--shadow-color);
+        }
+        button {
+            background: var(--accent-color);
+            color: var(--text-color);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px var(--shadow-color);
+            background: #ff6b8a;
+        }
+        button.secondary {
+            background: var(--secondary-accent);
+        }
+        button.secondary:hover {
+            background: #2a588b;
+        }
+        .selection-screen {
+            text-align: center;
+        }
+        .game-area {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #quiz-card {
+            background: var(--secondary-accent);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+        }
+        #code-display, #fix-code-editor {
+            background: var(--bg-color);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #d1d1e9;
+            border: 1px solid #333;
+        }
+        #fix-code-editor {
+            width: calc(100% - 30px);
+            height: 200px;
+            resize: vertical;
+            border: none;
+            outline: none;
+        }
+        .mcq-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .mcq-option label {
+            display: block;
+            background: var(--bg-color);
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+        .mcq-option label:hover {
+            background: var(--secondary-accent);
+            color: var(--accent-color);
+        }
+        input[type="radio"] { display: none; }
+        input[type="radio"]:checked + label {
+            background: var(--accent-color);
+            color: var(--text-color);
+            box-shadow: 0 2px 5px var(--shadow-color);
+        }
+
+        #feedback-area, #hint-modal {
+            padding: 15px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            display: none;
+        }
+        #feedback-area.correct { background: var(--success-color); }
+        #feedback-area.incorrect { background: var(--error-color); }
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--secondary-accent);
+            padding: 30px;
+            z-index: 1000;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 80%;
+            text-align: left;
+            border-radius: var(--border-radius);
+        }
+        .modal h3 {
+            margin-top: 0;
+            color: var(--accent-color);
+        }
+        .modal-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #score-board, #timer-display {
+            background: var(--secondary-accent);
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+        #score-board span, #timer-display span {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent-color);
+        }
+        .stats-and-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #share-link-box {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #share-link-input {
+            flex-grow: 1;
+            padding: 8px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--bg-color);
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            h1 { font-size: 1.8rem; }
+            h2 { font-size: 1.4rem; }
+            button { width: 100%; }
+            .button-group { flex-direction: column; }
+            .stats-and-info { flex-direction: column; gap: 10px; }
+            #score-board, #timer-display { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="auth-screen" class="selection-screen">
+        <h1>Welcome, Debugger! 🐞</h1>
+        <p>Enter your name to start your journey:</p>
+        <div class="flex flex-col gap-4 items-center">
+            <input type="text" id="player-name-input" placeholder="Your Name" class="px-4 py-2 rounded-lg text-black w-2/3">
+            <button onclick="setNameAndProceed()">Start</button>
+        </div>
+    </div>
+    
+    <div id="start-screen" class="selection-screen" style="display: none;">
+        <h2>Choose your debugging level! 🐞</h2>
+        <div class="button-group">
+            <button onclick="selectLevel('beginner')">🟢 Beginner</button>
+            <button onclick="selectLevel('intermediate')">🟡 Intermediate</button>
+            <button onclick="selectLevel('advanced')">🔴 Advanced</button>
+        </div>
+    </div>
+
+    <div id="mode-screen" class="selection-screen" style="display: none;">
+        <h2>Choose your game mode! 🎮</h2>
+        <div class="button-group">
+            <button onclick="startGame('time-attack')">⚡ Time Attack (60s)</button>
+            <button onclick="startGame('fix-the-bug')">✍️ Fix the Bug</button>
+            <button onclick="startGame('multiple-choice')">🧐 Multiple Choice</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="game-area">
+        <div class="stats-and-info">
+            <div id="score-board">Score: <span>0</span></div>
+            <div id="timer-display">Time: <span>60</span>s</div>
+        </div>
+        <div id="quiz-card">
+            <h2 id="question-title"></h2>
+            <p id="question-text"></p>
+            <pre id="code-display"></pre>
+            <textarea id="fix-code-editor" style="display: none;"></textarea>
+
+            <div id="mcq-options" class="mcq-options" style="display: none;"></div>
+        </div>
+
+        <div class="button-group">
+            <button id="submit-btn" onclick="checkAnswer()">Submit</button>
+            <button id="hint-btn" class="secondary" onclick="showHint()">💡 Hint</button>
+        </div>
+    </div>
+
+    <div id="feedback-area" style="display: none;">
+        <h2 id="feedback-title"></h2>
+        <p id="explanation"></p>
+        <div id="diff-view" style="display: none;">
+            <h3>Broken Code vs. Fixed Code</h3>
+            <pre id="broken-code-diff"></pre>
+            <pre id="fixed-code-diff"></pre>
+        </div>
+        <div class="button-group">
+            <button id="next-btn" onclick="nextQuestion()">➡️ Next Bug</button>
+            <button onclick="endGame()">🏁 End Game</button>
+        </div>
+    </div>
+
+    <div id="end-screen" class="game-area">
+        <h2>Game Over! 🏁</h2>
+        <p id="final-score"></p>
+        <div id="performance-summary" style="margin-top: 20px; text-align: left;">
+            <h3>Your Rewards History 🏆</h3>
+            <div id="rewards-history" class="overflow-y-auto max-h-48 bg-gray-800 p-4 rounded-lg">
+                <p>No rewards found. Play a game to earn one! 🐞</p>
+            </div>
+            <h3 class="mt-4">Rewards & Tips 💡</h3>
+            <p id="reward-message"></p>
+            <p id="coding-tip"></p>
+        </div>
+        <div class="button-group">
+            <button onclick="resetGame()">🔄 Play Again</button>
+            <button onclick="showShareModal()">🔗 Share</button>
+        </div>
+    </div>
+
+    <!-- Custom hint modal -->
+    <div id="hint-modal" class="modal">
+        <h3>💡 Hint</h3>
+        <p id="hint-modal-text" class="modal-content"></p>
+        <button onclick="closeHintModal()">Close</button>
+    </div>
+
+    <!-- Custom message modal for warnings -->
+    <div id="message-modal" class="modal">
+        <h3 id="message-modal-title"></h3>
+        <p id="message-modal-text" class="modal-content"></p>
+        <button onclick="closeMessageModal()">OK</button>
+    </div>
+    
+    <!-- Custom share modal -->
+    <div id="share-modal" class="modal">
+        <h3>Share This Quiz! 🔗</h3>
+        <p>Copy the link below and share it with your friends to challenge them!</p>
+        <div id="share-link-box">
+            <input type="text" id="share-link-input" readonly>
+            <button onclick="copyToClipboard()">Copy</button>
+        </div>
+        <button onclick="closeShareModal()">Close</button>
+    </div>
+</div>
+
+<script type="module">
+    // Firebase scripts
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- Quiz Data ---
+    const quizData = [
+        // --- Beginner Multiple Choice Questions ---
+        {
+            language: "JavaScript",
+            errorType: "Syntax Error",
+            mode: "multiple-choice",
+            level: "beginner",
+            question: "This function has a syntax error. What's wrong? 🐞",
+            brokenCode: "function greet(name) {\n  console.log('Hello, ' + name;\n}",
+            options: [
+                "Missing closing parenthesis on the `console.log` call.",
+                "Missing semicolon at the end of the line.",
+                "The 'name' parameter is not defined.",
+                "Function keyword is misspelled."
+            ],
+            correctAnswer: "Missing closing parenthesis on the `console.log` call.",
+            explanation: "The `console.log` statement is missing its closing parenthesis. All function calls in JavaScript must have parentheses, even if they don't take arguments."
+        },
+        {
+            language: "Python",
+            errorType: "TypeError",
+            mode: "multiple-choice",
+            level: "beginner",
+            question: "What is the problem with this code that attempts to concatenate a string and an integer?",
+            brokenCode: "age = 25\nprint(\"I am \" + age + \" years old.\")",
+            options: [
+                "Python does not allow string concatenation.",
+                "The `age` variable needs to be a string.",
+                "The `print` function requires a semicolon.",
+                "The code is fine and will not produce an error."
+            ],
+            correctAnswer: "The `age` variable needs to be a string.",
+            explanation: "You cannot concatenate a string and an integer directly in Python. You must first convert the integer to a string using `str(age)` or use an f-string."
+        },
+        {
+            language: "HTML",
+            errorType: "Logical Error",
+            mode: "multiple-choice",
+            level: "beginner",
+            question: "Why does the image not show up? 🐞",
+            brokenCode: "<img src=\"images/picture.jpg\" alt=\"A beautiful image\">\n",
+            options: [
+                "The `src` attribute is missing.",
+                "The file path is incorrect or the image file is missing.",
+                "The `img` tag is not a self-closing tag.",
+                "The `alt` attribute is not a valid attribute."
+            ],
+            correctAnswer: "The file path is incorrect or the image file is missing.",
+            explanation: "The HTML code is syntactically correct. A likely reason for the image not appearing is that the file path in the `src` attribute is wrong, or the `picture.jpg` file does not exist at that location."
+        },
+        {
+            language: "CSS",
+            errorType: "Syntax Error",
+            mode: "multiple-choice",
+            level: "beginner",
+            question: "Why is the text color not changing to blue? 🐞",
+            brokenCode: "p { color: blue }",
+            options: [
+                "Missing a closing curly brace `}`.",
+                "Missing a semicolon `;` after the property value.",
+                "The selector `p` is incorrect.",
+                "The color name 'blue' is not valid."
+            ],
+            correctAnswer: "Missing a semicolon `;` after the property value.",
+            explanation: "In CSS, each property declaration within a rule must be terminated with a semicolon. The correct syntax is `p { color: blue; }`."
+        },
+        {
+            language: "JavaScript",
+            errorType: "ReferenceError",
+            mode: "multiple-choice",
+            level: "beginner",
+            question: "The following code produces a `ReferenceError`. Why? 🐞",
+            brokenCode: "let a = 10;\nconst b = 20;\n\nfunction myFunc() {\n  var c = 30;\n}\n\nconsole.log(c);",
+            options: [
+                "The variable `c` is block-scoped.",
+                "The `var` keyword is deprecated.",
+                "The variable `c` is function-scoped.",
+                "The variable `a` is not declared with `const`."
+            ],
+            correctAnswer: "The variable `c` is function-scoped.",
+            explanation: "Variables declared with `var` are function-scoped. They are only accessible within the function where they are declared, not outside of it."
+        },
+        
+        // --- Beginner Fix the Bug Questions ---
+        {
+            language: "Python",
+            errorType: "Logic Error",
+            mode: "fix-the-bug",
+            level: "beginner",
+            question: "This function is supposed to return the sum of all numbers in a list, but it's returning the sum of just the last number. Fix it! 🐞",
+            brokenCode: "def sum_list(numbers):\n    total = 0\n    for num in numbers:\n        total = num\n    return total",
+            correctCode: "def sum_list(numbers):\n    total = 0\n    for num in numbers:\n        total += num\n    return total",
+            explanation: "The line `total = num` reassigns the `total` to the current number in the loop, instead of adding to it. The correct operator for addition and assignment is `+=`."
+        },
+        {
+            language: "C++",
+            errorType: "Runtime Error",
+            mode: "fix-the-bug",
+            level: "beginner",
+            question: "This C++ program is trying to access an element outside the bounds of the array. Fix the loop condition. 🐞",
+            brokenCode: "#include <iostream>\nint main() {\n    int arr[5] = {1, 2, 3, 4, 5};\n    for (int i = 0; i <= 5; ++i) {\n        std::cout << arr[i] << \" \";\n    }\n    return 0;\n}",
+            correctCode: "#include <iostream>\nint main() {\n    int arr[5] = {1, 2, 3, 4, 5};\n    for (int i = 0; i < 5; ++i) {\n        std::cout << arr[i] << \" \";\n    }\n    return 0;\n}",
+            explanation: "Arrays in C++ are 0-indexed, meaning a 5-element array has indices from 0 to 4. The condition `i <= 5` will try to access `arr[5]`, which is out of bounds. The correct condition should be `i < 5`."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "fix-the-bug",
+            level: "beginner",
+            question: "This code is supposed to check if a number is even, but it's not working correctly. Find the bug! 🐞",
+            brokenCode: "let number = 10;\nif (number / 2 == 0) {\n  console.log('Even');\n} else {\n  console.log('Odd');\n}",
+            correctCode: "let number = 10;\nif (number % 2 == 0) {\n  console.log('Even');\n} else {\n  console.log('Odd');\n}",
+            explanation: "To check if a number is even, you need to find the remainder when it's divided by 2. This is done with the modulo operator (`%`). The division operator (`/`) simply divides the number and won't give a remainder."
+        },
+
+        // --- Intermediate Multiple Choice Questions ---
+        {
+            language: "Python",
+            errorType: "Syntax Error",
+            mode: "multiple-choice",
+            level: "intermediate",
+            question: "This Python code has an indentation error. How should it be fixed? 🐞",
+            brokenCode: "def my_function():\nprint(\"Hello\")",
+            options: [
+                "Add an indent to the print statement.",
+                "Remove the parenthesis from the print function.",
+                "Add a semicolon at the end of the line.",
+                "Remove the colon after the function definition."
+            ],
+            correctAnswer: "Add an indent to the print statement.",
+            explanation: "Python uses indentation to define blocks of code. The `print` statement inside the `my_function` must be indented to be considered part of the function body."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Asynchronous Bug",
+            mode: "multiple-choice",
+            level: "intermediate",
+            question: "This code returns 'undefined' immediately. The `fetchData` function needs to be corrected to handle the asynchronous call.",
+            brokenCode: "async function fetchData() {\n  const response = fetch('https://api.example.com/data');\n  const data = response.json();\n  return data;\n}\n\nfetchData().then(result => console.log(result));",
+            options: [
+                "The `fetch` function is misspelled.",
+                "The function needs a `catch` block for errors.",
+                "The `await` keyword is missing before `fetch` and `response.json()`.",
+                "The function should use `XMLHttpRequest` instead of `fetch`."
+            ],
+            correctAnswer: "The `await` keyword is missing before `fetch` and `response.json()`.",
+            explanation: "The `fetch` call and `response.json()` are asynchronous operations. Without the `await` keyword, the code moves on before the promises are resolved, causing `undefined` to be returned."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "multiple-choice",
+            level: "intermediate",
+            question: "This code is supposed to create a new array with numbers greater than 5, but it's not working. What is the bug? 🐞",
+            brokenCode: "const numbers = [1, 7, 3, 9, 2, 8];\nconst filteredNumbers = numbers.forEach(num => {\n  if (num > 5) return num;\n});\nconsole.log(filteredNumbers); // Expected: [7, 9, 8]",
+            options: [
+                "The `forEach` method is misspelled.",
+                "The arrow function needs curly braces.",
+                "The `return` statement is not correctly used in `forEach`.",
+                "The `forEach` method returns `undefined` and should be replaced with `filter`."
+            ],
+            correctAnswer: "The `forEach` method returns `undefined` and should be replaced with `filter`.",
+            explanation: "The `forEach` method executes a function for each element but does not return a new array. The `filter` method is the correct choice here as it returns a new array containing only the elements that pass the provided test."
+        },
+        {
+            language: "Python",
+            errorType: "Logical Error",
+            mode: "multiple-choice",
+            level: "intermediate",
+            question: "This Python function is supposed to return a new list with unique values, but it's not working correctly. Find the bug! 🐞",
+            brokenCode: "def get_unique(arr):\n  unique = []\n  for item in arr:\n    if item not in unique:\n      unique.append(item)\n  return unique",
+            options: [
+                "The `append` method is incorrect.",
+                "The function should use a `set` for better performance.",
+                "The code is syntactically wrong.",
+                "The variable `unique` is not initialized."
+            ],
+            correctAnswer: "The function should use a `set` for better performance.",
+            explanation: "While the logic is correct, it is highly inefficient for large lists because `item not in unique` performs a linear scan. A more Pythonic and performant way to find unique elements is to use a `set`."
+        },
+        
+        // --- Intermediate Fix the Bug Questions ---
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "fix-the-bug",
+            level: "intermediate",
+            question: "This function is meant to capitalize the first letter of each word in a string, but it's not working correctly. Fix it! 🐞",
+            brokenCode: "function capitalizeWords(str) {\n  return str.split(' ').map(word => {\n    return word.charAt(0).toUpperCase();\n  }).join(' ');\n}",
+            correctCode: "function capitalizeWords(str) {\n  return word.charAt(0).toUpperCase() + word.slice(1);",
+            explanation: "The code was only returning the first character of each word, capitalized. It needs to also return the rest of the word, which can be achieved with `word.slice(1)`."
+        },
+        {
+            language: "Python",
+            errorType: "Logical Error",
+            mode: "fix-the-bug",
+            level: "intermediate",
+            question: "This code is meant to check if a number is positive, but the output is always wrong. Fix the logic! 🐞",
+            brokenCode: "num = -5\nif num > 0:\n    print('Positive')\nelse:\n    print('Negative')",
+            correctCode: "num = -5\nif num > 0:\n    print('Positive')\nelif num < 0:\n    print('Negative')\nelse:\n    print('Zero')",
+            explanation: "The 'else' block incorrectly assumes a number is negative if it is not positive. The code should explicitly handle the case of zero. A better 'else' message would be 'Not positive', but adding an `elif` for zero is a more robust fix."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Type Coercion",
+            mode: "fix-the-bug",
+            level: "intermediate",
+            question: "This code always logs 'Not Equal' even when the numbers are the same. Fix the comparison operator. 🐞",
+            brokenCode: "let a = 5;\nlet b = \"5\";\n\nif (a == b) {\n  console.log('Equal');\n} else {\n  console.log('Not Equal');\n}",
+            correctCode: "let a = 5;\nlet b = \"5\";\n\nif (a === b) {\n  console.log('Equal');\n} else {\n  console.log('Not Equal');\n}",
+            explanation: "The `==` operator performs type coercion, meaning it tries to convert the values to the same type before comparing them. The `===` operator (strict equality) checks both value and type, which is what's needed here to correctly identify that the number `5` is not strictly equal to the string `'5'`."
+        },
+        
+        // --- Advanced Multiple Choice Questions ---
+        {
+            language: "JavaScript",
+            errorType: "Scope/Closure Bug",
+            mode: "multiple-choice",
+            level: "advanced",
+            question: "Why does the following code always print '10' instead of the numbers 0 through 9? 🐞",
+            brokenCode: "for (var i = 0; i < 10; i++) {\n  setTimeout(() => console.log(i), 100);\n}",
+            options: [
+                "The `setTimeout` function is being called incorrectly.",
+                "The `var` keyword creates a function-scoped variable, which is modified by the loop before the timeouts execute.",
+                "The `console.log` statement should be outside the loop.",
+                "The loop condition `i < 10` is incorrect."
+            ],
+            correctAnswer: "The `var` keyword creates a function-scoped variable, which is modified by the loop before the timeouts execute.",
+            explanation: "The `var` keyword does not have block scope. By the time the `setTimeout` callbacks finally run (after the loop has finished), the variable `i` has already been incremented to its final value of 10. To fix this, you should use `let` instead of `var` to create a block-scoped variable for each iteration."
+        },
+        {
+            language: "C#",
+            errorType: "Concurrency Bug",
+            mode: "multiple-choice",
+            level: "advanced",
+            question: "This C# code has a race condition. What is the best way to ensure the final value of the counter is always 1000? 🐞",
+            brokenCode: "int counter = 0;\nList<Task> tasks = new List<Task>();\nfor (int i = 0; i < 1000; i++) {\n  tasks.Add(Task.Run(() => counter++));\n}\nTask.WhenAll(tasks).Wait();\nConsole.WriteLine(counter);",
+            options: [
+                "Use a `lock` statement or `Interlocked.Increment`.",
+                "The `Task.WhenAll` method should be replaced with a `for` loop.",
+                "The code is fine and does not need to be fixed.",
+                "The `counter` variable should be a `string`."
+            ],
+            correctAnswer: "Use a `lock` statement or `Interlocked.Increment`.",
+            explanation: "The `counter++` operation is not atomic, meaning multiple threads can read, increment, and write to the variable at the same time, leading to lost updates. Using a `lock` or the `Interlocked.Increment` method ensures that only one thread can access the counter at a time, preventing race conditions."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "multiple-choice",
+            level: "advanced",
+            question: "This function is designed to recursively flatten a nested array, but it only works on the first level. What's the bug? 🐞",
+            brokenCode: "function flattenArray(arr) {\n  let flattened = [];\n  arr.forEach(item => {\n    if (Array.isArray(item)) {\n      item.forEach(subItem => flattened.push(subItem));\n    } else {\n      flattened.push(item);\n    }\n  });\n  return flattened;\n}",
+            options: [
+                "The `forEach` method is incorrect for this task.",
+                "The function needs to be recursive.",
+                "The `flattened` array is not initialized correctly.",
+                "The `Array.isArray` check is wrong."
+            ],
+            correctAnswer: "The function needs to be recursive.",
+            explanation: "The function only checks for arrays at the first level. To handle deeply nested arrays, the function must call itself (`flattenArray`) on any sub-array it finds. The logic should be `item.forEach(subItem => flattened.push(...flattenArray([subItem])));` or a similar recursive call."
+        },
+        
+        // --- Advanced Fix the Bug Questions ---
+        {
+            language: "Python",
+            errorType: "Performance Bug",
+            mode: "fix-the-bug",
+            level: "advanced",
+            question: "This function is designed to find the largest number in a list, but for very large lists, it is inefficient. Optimize it for better performance. 🐞",
+            brokenCode: "def find_largest(numbers):\n    if not numbers: return None\n    largest = numbers[0]\n    for num in numbers:\n        if num > largest:\n            largest = num\n    return largest",
+            correctCode: "def find_largest(numbers):\n    if not numbers: return None\n    return max(numbers)",
+            explanation: "The built-in `max()` function in Python is highly optimized and much faster for finding the largest element in a collection than a manual loop, especially for large datasets. The original code is correct but inefficient."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "fix-the-bug",
+            level: "advanced",
+            question: "This function is supposed to return a new array with only unique values, but it's not working correctly. Fix it! 🐞",
+            brokenCode: "function getUnique(arr) {\n  let unique = [];\n  for (let i = 0; i < arr.length; i++) {\n    if (arr.indexOf(arr[i]) === i) {\n      unique.push(arr[i]);\n    }\n  }\n  return unique;\n}",
+            correctCode: "function getUnique(arr) {\n  return [...new Set(arr)];\n}",
+            explanation: "The `indexOf` method always returns the index of the *first* occurrence of an element. This logic fails for arrays with duplicates. A much cleaner, more efficient way to get unique values is to convert the array to a `Set` (which only stores unique values) and then spread it back into an array."
+        },
+        {
+            language: "Python",
+            errorType: "Concurrency Bug",
+            mode: "fix-the-bug",
+            level: "advanced",
+            question: "This Python code has a race condition. It's supposed to use `multiprocessing` to increment a shared counter 1000 times, but the final value is not always 1000. Fix the code to ensure the final value is always correct. 🐞",
+            brokenCode: "import multiprocessing\n\ndef increment(counter):\n    for _ in range(100):\n        counter.value += 1\n\nif __name__ == '__main__':\n    counter = multiprocessing.Value('i', 0)\n    processes = []\n    for _ in range(10):\n        p = multiprocessing.Process(target=increment, args=(counter,))\n        processes.append(p)\n        p.start()\n    for p in processes:\n        p.join()\n    print(counter.value)",
+            correctCode: "import multiprocessing\n\ndef increment(counter, lock):\n    for _ in range(100):\n        lock.acquire()\n        counter.value += 1\n        lock.release()\n\nif __name__ == '__main__':\n    counter = multiprocessing.Value('i', 0)\n    lock = multiprocessing.Lock()\n    processes = []\n    for _ in range(10):\n        p = multiprocessing.Process(target=increment, args=(counter, lock,))\n        processes.append(p)\n        p.start()\n    for p in processes:\n        p.join()\n    print(counter.value)",
+            explanation: "The `counter.value += 1` operation is not atomic. Multiple processes can try to read, increment, and write to the value at the same time, causing lost updates. A `multiprocessing.Lock()` is needed to ensure only one process can access the critical section (the increment operation) at a time."
+        },
+        
+        // --- Time Attack Questions (BEGINNER) ---
+        {
+            language: "JavaScript",
+            errorType: "ReferenceError",
+            mode: "time-attack",
+            level: "beginner",
+            question: "The following code produces a `ReferenceError` because the `name` variable is not accessible outside the `if` block. Fix it! 🐞",
+            options: [
+                "Use the `var` keyword instead of `let`.",
+                "The `console.log` statement needs to be inside the `if` block.",
+                "Change `console.log` to `console.dir`.",
+                "The code is correct as is."
+            ],
+            brokenCode: "if (true) {\n  let name = 'Alice';\n}\nconsole.log(name);",
+            correctAnswer: "The `console.log` statement needs to be inside the `if` block.",
+            explanation: "Variables declared with `let` and `const` are block-scoped, meaning they only exist within the block they are defined in. The `console.log` statement needs to be inside the same block as the `let` declaration to access the variable."
+        },
+        {
+            language: "Python",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "beginner",
+            question: "This function is supposed to return `True` if a number is positive, and `False` otherwise. What's the bug? 🐞",
+            options: [
+                "The function should use the `>` operator, not `>=`.",
+                "The `return False` statement is outside the function.",
+                "The function is correct, this is a trick question.",
+                "The parameter `num` is a string."
+            ],
+            brokenCode: "def is_positive(num):\n    if num >= 0:\n        return True\n    return False",
+            correctAnswer: "The function should use the `>` operator, not `>=`.",
+            explanation: "The condition `num >= 0` includes zero, which is not a positive number. The correct condition should be `num > 0`."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "beginner",
+            question: "This `for` loop is an infinite loop. What is the bug? 🐞",
+            options: [
+                "The initialization `let i = 0` is incorrect.",
+                "The condition `i >= 0` will always be true.",
+                "The increment `i++` is missing.",
+                "The `console.log` is inside the loop."
+            ],
+            brokenCode: "for (let i = 0; i >= 0; i++) {\n  console.log(i);\n}",
+            correctAnswer: "The condition `i >= 0` will always be true.",
+            explanation: "The loop condition `i >= 0` will always evaluate to true for positive values of `i`, resulting in an infinite loop. The correct condition for a standard loop might be `i < some_number`."
+        },
+        {
+            language: "HTML",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "beginner",
+            question: "This link is not clickable. What is the most likely reason? 🐞",
+            options: [
+                "The `<a>` tag needs a closing slash.",
+                "The `<a>` tag is missing the `href` attribute.",
+                "The link text is wrong.",
+                "The `<a>` tag should be a `button`."
+            ],
+            brokenCode: "<a>Click Here</a>",
+            correctAnswer: "The `<a>` tag is missing the `href` attribute.",
+            explanation: "The `href` attribute is what makes a link clickable. Without it, the `<a>` tag is just a piece of text with no destination."
+        },
+        {
+            language: "CSS",
+            errorType: "Syntax Error",
+            mode: "time-attack",
+            level: "beginner",
+            question: "The following CSS rule is not working. What is the syntax error? 🐞",
+            options: [
+                "The `font-size` value is missing units.",
+                "The property name `backgroun-color` is misspelled.",
+                "The `h1` selector is wrong.",
+                "The semicolon is missing."
+            ],
+            brokenCode: "h1 { backgroun-color: red; }",
+            correctAnswer: "The property name `backgroun-color` is misspelled.",
+            explanation: "CSS properties must be spelled correctly. `background-color` is the correct property name. The browser will ignore a rule with a misspelled property."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "beginner",
+            question: "This code returns `false` even though the values are the same. Fix the comparison operator. 🐞",
+            options: [
+                "The `==` operator is incorrect for comparing numbers and strings.",
+                "The variable `a` should be a `const`.",
+                "The code is not inside a function.",
+                "The values are not the same."
+            ],
+            brokenCode: "let a = 10;\nlet b = \"10\";\nconsole.log(a === b);",
+            correctAnswer: "The `==` operator is incorrect for comparing numbers and strings.",
+            explanation: "The strict equality operator (`===`) checks both value and type. The number `10` is not the same type as the string `'10'`. To check for loose equality (value only), you should use the `==` operator."
+        },
+        {
+            language: "Python",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "beginner",
+            question: "This code is meant to add a new item to a list, but it's not working as expected. Find the bug! 🐞",
+            options: [
+                "The list name is misspelled.",
+                "The `+` operator is used for concatenation, not adding to a list in place.",
+                "The `item` variable is not a string.",
+                "The code is syntactically wrong."
+            ],
+            brokenCode: "my_list = [1, 2, 3]\nmy_list = my_list + 4",
+            correctAnswer: "The `+` operator is used for concatenation, not adding to a list in place.",
+            explanation: "In Python, you can't add an integer to a list using the `+` operator. To add an item to the end of a list, you should use `my_list.append(4)`."
+        },
+        
+        // --- Time Attack Questions (INTERMEDIATE) ---
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "intermediate",
+            question: "This function is supposed to check if a number is a prime number, but it returns incorrect values for certain numbers. Find the bug! 🐞",
+            options: [
+                "The loop condition should be `i <= num`.",
+                "The function should handle negative numbers.",
+                "The `for` loop is inefficient; it should stop earlier.",
+                "The function incorrectly identifies 1 as a prime number."
+            ],
+            correctAnswer: "The `for` loop is inefficient; it should stop earlier.",
+            brokenCode: "function isPrime(num) {\n  if (num <= 1) return false;\n  for (let i = 2; i < num; i++) {\n    if (num % i === 0) return false;\n  }\n  return true;\n}",
+            explanation: "The loop condition `i < num` is technically correct but inefficient. You only need to check for divisors up to the square root of the number, not the number itself. A more efficient loop would be `for (let i = 2; i <= Math.sqrt(num); i++)`."
+        },
+        {
+            language: "Python",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "intermediate",
+            question: "This Python function is supposed to reverse a string, but it's not working. What is the bug? 🐞",
+            options: [
+                "The slice notation `[::-1]` is incorrect for reversing a string.",
+                "The function is missing a `return` statement.",
+                "The variable `s` is not defined.",
+                "This is a trick question; the code is correct."
+            ],
+            brokenCode: "def reverse_string(s):\n  return s[::-1]",
+            correctAnswer: "This is a trick question; the code is correct.",
+            explanation: "This is a trick question! The provided code is correct and will reverse a string in Python using slice notation. The 'bug' is in the user's assumption that it's broken, which is a common logical error in a developer's mindset."
+        },
+        {
+            language: "Python",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "intermediate",
+            question: "This code is supposed to sum all even numbers in a list, but it's not working. Find the bug! 🐞",
+            options: [
+                "The `for` loop is incorrect.",
+                "The `sum` variable is not initialized.",
+                "The condition `num % 2 == 1` is checking for odd numbers.",
+                "The `append` method is misspelled."
+            ],
+            brokenCode: "numbers = [1, 2, 3, 4, 5, 6]\nsum = 0\nfor num in numbers:\n  if num % 2 == 1:\n    sum += num\nprint(sum)",
+            correctAnswer: "The condition `num % 2 == 1` is checking for odd numbers.",
+            explanation: "The modulo operator (`%`) returns the remainder of a division. `num % 2 == 1` will be true for odd numbers, not even ones. To fix this, the condition should be `num % 2 == 0`."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "intermediate",
+            question: "This function is supposed to multiply all numbers in an array by 2, but it's not returning a new array. What's the bug? 🐞",
+            options: [
+                "The `forEach` method is used instead of `map`.",
+                "The function is missing a return statement.",
+                "The arrow function syntax is wrong.",
+                "The `console.log` statement is in the wrong place."
+            ],
+            brokenCode: "const numbers = [1, 2, 3];\nfunction multiplyByTwo(arr) {\n  const result = [];\n  arr.forEach(num => result.push(num * 2));\n}\nconsole.log(multiplyByTwo(numbers)); // Expected: [2, 4, 6]",
+            correctAnswer: "The function is missing a return statement.",
+            explanation: "The `multiplyByTwo` function correctly calculates the new array `result` but it never returns it. You need to add `return result;` at the end of the function. The `map` method would be an even better, more concise solution."
+        },
+        {
+            language: "CSS",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "intermediate",
+            question: "The following CSS code is not making the text color `red`. What is the issue? 🐞",
+            options: [
+                "The `h1` selector is too specific.",
+                "The ID selector `h1` is wrong.",
+                "The inline style has higher specificity.",
+                "The color `red` is not supported."
+            ],
+            brokenCode: "<html>\n<body>\n  <h1 id=\"title\" style=\"color:blue;\">Hello World</h1>\n</body>\n</html>\n\n<style>\n  #title { color: red; }\n</style>",
+            correctAnswer: "The inline style has higher specificity.",
+            explanation: "In CSS, inline styles (`style=\"...\"`) have a higher specificity than ID selectors. The `color: blue` in the inline style will always override the `color: red` in the `#title` rule."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "intermediate",
+            question: "This function is supposed to check if a string is a palindrome, but it always returns `false`. Find the bug! 🐞",
+            options: [
+                "The `.toLowerCase()` method is missing.",
+                "The `reverse()` method is incorrect for strings.",
+                "The comparison should be `s === reversedS`.",
+                "The `s.split('')` method is wrong."
+            ],
+            brokenCode: "function isPalindrome(s) {\n  const reversedS = s.split('').reverse().join('');\n  return s == reversedS;\n}",
+            correctAnswer: "The `.toLowerCase()` method is missing.",
+            explanation: "The function is case-sensitive and will return `false` for 'Racecar' because 'Racecar' is not equal to 'racecaR'. The string should be converted to a consistent case before comparison, such as `s.toLowerCase()`."
+        },
+        
+        // --- Time Attack Questions (ADVANCED) ---
+        {
+            language: "C++",
+            errorType: "Memory Leak",
+            mode: "time-attack",
+            level: "advanced",
+            question: "This C++ code has a memory leak. What is the bug? 🐞",
+            options: [
+                "The `data` pointer is not initialized.",
+                "The array size is too large.",
+                "The `delete` operator is missing to free the allocated memory.",
+                "The `return 0;` statement is incorrect."
+            ],
+            brokenCode: "#include <iostream>\n\nint main() {\n  int* data = new int[100];\n  // ... use data ...\n  return 0;\n}",
+            correctAnswer: "The `delete` operator is missing to free the allocated memory.",
+            explanation: "When you use `new` to allocate memory in C++, you must use `delete` to deallocate it. The correct way to free the array is `delete[] data;` to avoid a memory leak."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "advanced",
+            question: "This function is designed to debounce an event handler, but it's not working correctly. What's the bug? 🐞",
+            options: [
+                "The function needs to handle the `this` context and arguments.",
+                "The `clearTimeout` function is misspelled.",
+                "The `delay` parameter is not used.",
+                "The `timeoutId` variable is not declared."
+            ],
+            brokenCode: "function debounce(func, delay) {\n  let timeoutId;\n  return function() {\n    clearTimeout(timeoutId);\n    timeoutId = setTimeout(func, delay);\n  }\n}",
+            correctAnswer: "The function needs to handle the `this` context and arguments.",
+            explanation: "The returned function needs to apply the correct `this` context and arguments to the original function. The correct implementation would be `setTimeout(() => func.apply(this, arguments), delay)`."
+        },
+        {
+            language: "Python",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "advanced",
+            question: "This function is supposed to return a new dictionary with keys and values swapped, but it's not working. What is the bug? 🐞",
+            options: [
+                "The `reversed` function is not applicable to dictionaries.",
+                "The code is missing a `return` statement.",
+                "The key and value assignment is incorrect in the dictionary comprehension.",
+                "The `items()` method is not valid for dictionaries."
+            ],
+            brokenCode: "def swap_dict(d):\n  return {value: key for key, value in d}",
+            correctAnswer: "The key and value assignment is incorrect in the dictionary comprehension.",
+            explanation: "The code `d` is a dictionary, not an iterable of key-value pairs. The correct way to iterate through key-value pairs is with the `.items()` method, as in `for key, value in d.items()`."
+        },
+        {
+            language: "JavaScript",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "advanced",
+            question: "This function uses `Promise.all()` to fetch data, but it fails if any single promise rejects. What is a better method to use if you want to get results from all fulfilled promises? 🐞",
+            options: [
+                "Use `async/await` instead of `Promise.all()`.",
+                "Wrap each promise in a `try...catch` block.",
+                "Use `Promise.allSettled()` instead.",
+                "The code is fine and will not fail."
+            ],
+            brokenCode: "const p1 = Promise.resolve(3);\nconst p2 = new Promise((resolve, reject) => setTimeout(reject, 100, 'Error'));\nconst p3 = Promise.resolve(5);\n\nPromise.all([p1, p2, p3])\n  .then(values => console.log(values))\n  .catch(error => console.error(error));",
+            correctAnswer: "Use `Promise.allSettled()` instead.",
+            explanation: "`Promise.all()` will immediately reject with the first error. `Promise.allSettled()` waits for all promises to settle (either fulfill or reject) and returns an array of objects describing the outcome of each promise."
+        },
+        {
+            language: "Python",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "advanced",
+            question: "This function is trying to modify a global variable, but it's not working correctly. Find the bug! 🐞",
+            options: [
+                "The `global` keyword is misspelled.",
+                "The `my_function` is not being called.",
+                "The `global` keyword is missing before `counter`.",
+                "The `print` statement is in the wrong place."
+            ],
+            brokenCode: "counter = 0\n\ndef my_function():\n  counter += 1\n\nmy_function()\nprint(counter)",
+            correctAnswer: "The `global` keyword is missing before `counter`.",
+            explanation: "When you assign a new value to a variable inside a function, Python treats it as a local variable. To modify a global variable from within a function, you must explicitly declare it with the `global` keyword."
+        },
+        {
+            language: "HTML",
+            errorType: "Logical Error",
+            mode: "time-attack",
+            level: "advanced",
+            question: "This `<form>` tag is not sending data to the server. What is a likely reason? 🐞",
+            options: [
+                "The `method` attribute is missing.",
+                "The form is missing an `action` attribute.",
+                "The `<input>` elements are not inside the form.",
+                "The form needs a `name` attribute."
+            ],
+            brokenCode: "<form method=\"POST\">\n  <input type=\"text\" name=\"username\">\n  <button type=\"submit\">Submit</button>\n</form>",
+            correctAnswer: "The form is missing an `action` attribute.",
+            explanation: "The `action` attribute specifies the URL where the form data should be sent. Without it, the form will submit to the same page, which is often not the desired behavior."
+        }
+    ];
+
+    // All game logic has been moved into this module to ensure correct scope.
+    // DOMContentLoaded listener ensures elements are available.
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Game State Variables ---
+        let currentQuiz = null; 
+        let questionsToAsk = []; 
+        let score = 0;
+        let timer = 60;
+        let gameInterval;
+        let gameMode = 'multiple-choice';
+        let gameLevel = 'beginner'; 
+        let playerName = '';
+        let userId = null;
+        let db = null;
+        let auth = null;
+        let isFirebaseReady = false;
+
+        // --- DOM Elements ---
+        const authScreen = document.getElementById('auth-screen');
+        const startScreen = document.getElementById('start-screen');
+        const modeScreen = document.getElementById('mode-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+        const feedbackArea = document.getElementById('feedback-area');
+        const hintModal = document.getElementById('hint-modal');
+        const messageModal = document.getElementById('message-modal');
+        const shareModal = document.getElementById('share-modal');
+        const playerNameInput = document.getElementById('player-name-input');
+        const rewardsHistoryEl = document.getElementById('rewards-history');
+
+        const questionTitle = document.getElementById('question-title');
+        const questionText = document.getElementById('question-text');
+        const codeDisplay = document.getElementById('code-display');
+        const fixCodeEditor = document.getElementById('fix-code-editor');
+        const mcqOptions = document.getElementById('mcq-options');
+        const scoreBoard = document.querySelector('#score-board span');
+        const timerDisplay = document.querySelector('#timer-display span');
+        const submitBtn = document.getElementById('submit-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const hintModalText = document.getElementById('hint-modal-text');
+        const finalScore = document.getElementById('final-score');
+        const rewardMessageEl = document.getElementById('reward-message');
+        const codingTipEl = document.getElementById('coding-tip');
+        const shareLinkInput = document.getElementById('share-link-input');
+
+        // --- Firebase & Initialization ---
+        // Global variables from Canvas
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        if (Object.keys(firebaseConfig).length > 0) {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        
+            // Sign in anonymously with the provided token
+            if (initialAuthToken) {
+                signInWithCustomToken(auth, initialAuthToken).catch((error) => {
+                    console.error("Error signing in with custom token:", error);
+                });
+            } else {
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Error signing in anonymously:", error);
+                });
+            }
+        } else {
+            console.error("Firebase config not available. Persistence features will not work.");
+        }
+        
+        // This listener ensures we only set userId after authentication is complete
+        if (auth) {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    userId = user.uid;
+                    isFirebaseReady = true;
+                    console.log('Firebase Auth and Firestore ready. User ID:', userId);
+                }
+            });
+        }
+
+        // --- Game Functions ---
+        window.setNameAndProceed = function() {
+            const name = playerNameInput.value.trim();
+            if (name === '') {
+                showMessageModal('Wait! 🛑', 'Please enter your name to begin.');
+                return;
+            }
+            playerName = name;
+            authScreen.style.display = 'none';
+            startScreen.style.display = 'block';
+        }
+
+        // --- Utility function to shuffle an array (Fisher-Yates algorithm) ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        window.selectLevel = function(level) {
+            gameLevel = level;
+            startScreen.style.display = 'none';
+            modeScreen.style.display = 'block';
+        }
+
+        window.startGame = function(mode) {
+            gameMode = mode;
+            score = 0;
+            currentQuiz = null;
+            questionsToAsk = quizData.filter(q => q.mode === gameMode && q.level === gameLevel);
+            
+            shuffleArray(questionsToAsk);
+
+            modeScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            endScreen.style.display = 'none';
+            feedbackArea.style.display = 'none';
+            
+            scoreBoard.textContent = score;
+            
+            if (gameInterval) {
+                clearInterval(gameInterval);
+            }
+
+            if (gameMode === 'time-attack') {
+                timer = 60;
+                timerDisplay.parentElement.style.display = 'block';
+                gameInterval = setInterval(updateTimer, 1000);
+            } else {
+                timerDisplay.parentElement.style.display = 'none';
+            }
+            
+            loadQuestion();
+        }
+
+        function updateTimer() {
+            timer--;
+            timerDisplay.textContent = timer;
+            if (timer <= 0) {
+                // Immediately end the game when the timer hits zero
+                endGame();
+            }
+        }
+
+        function loadQuestion() {
+            if (questionsToAsk.length === 0) {
+                // If we run out of questions, end the game
+                endGame();
+                return;
+            }
+            
+            // Reset UI elements for new question
+            codeDisplay.style.display = 'block';
+            fixCodeEditor.style.display = 'none';
+            mcqOptions.style.display = 'none';
+            submitBtn.style.display = 'block';
+            hintBtn.style.display = 'block';
+            feedbackArea.style.display = 'none';
+            
+            currentQuiz = questionsToAsk.pop();
+
+            questionTitle.textContent = `Bug: ${currentQuiz.language} | ${currentQuiz.errorType} 🐞`;
+            questionText.textContent = currentQuiz.question;
+            
+            scoreBoard.textContent = score;
+
+            if (currentQuiz.mode === 'fix-the-bug') {
+                codeDisplay.style.display = 'none';
+                fixCodeEditor.style.display = 'block';
+                fixCodeEditor.value = currentQuiz.brokenCode;
+            } else {
+                codeDisplay.textContent = currentQuiz.brokenCode;
+                mcqOptions.style.display = 'flex';
+                mcqOptions.innerHTML = '';
+                currentQuiz.options.forEach((option, index) => {
+                    const optionHtml = `
+                        <div class="mcq-option">
+                            <input type="radio" id="option${index}" name="mcq" value="${option}">
+                            <label for="option${index}">${option} 🐞</label>
+                        </div>
+                    `;
+                    mcqOptions.innerHTML += optionHtml;
+                });
+            }
+        }
+
+        window.checkAnswer = function() {
+            let isCorrect = false;
+            let userAnswer = null;
+            
+            if (currentQuiz.mode === 'fix-the-bug') {
+                userAnswer = fixCodeEditor.value.trim();
+                isCorrect = (userAnswer === currentQuiz.correctCode.trim());
+            } else {
+                const selectedOption = document.querySelector('input[name="mcq"]:checked');
+                if (!selectedOption) {
+                    showMessageModal("Oops! 🚨", "Please select an answer before submitting.");
+                    return;
+                }
+                userAnswer = selectedOption.value;
+                isCorrect = (userAnswer === currentQuiz.correctAnswer);
+            }
+
+            if (isCorrect) {
+                score++;
+                scoreBoard.textContent = score;
+                showFeedback('Correct! 🎉', currentQuiz.explanation, isCorrect);
+            } else {
+                showFeedback('Incorrect... 🤔', currentQuiz.explanation, isCorrect);
+            }
+            
+            submitBtn.style.display = 'none';
+            hintBtn.style.display = 'none';
+        }
+
+        function showFeedback(title, explanation, isCorrect) {
+            gameScreen.style.display = 'none';
+            feedbackArea.style.display = 'block';
+            
+            const feedbackTitle = document.getElementById('feedback-title');
+            const explanationEl = document.getElementById('explanation');
+            const diffView = document.getElementById('diff-view');
+            const brokenCodeDiff = document.getElementById('broken-code-diff');
+            const fixedCodeDiff = document.getElementById('fixed-code-diff');
+            const nextBtn = document.getElementById('next-btn');
+
+            feedbackTitle.textContent = title;
+            explanationEl.textContent = `Explanation: ${explanation}`;
+
+            if (currentQuiz.mode === 'fix-the-bug' && currentQuiz.correctCode) {
+                diffView.style.display = 'block';
+                brokenCodeDiff.textContent = currentQuiz.brokenCode;
+                fixedCodeDiff.textContent = currentQuiz.correctCode;
+            } else {
+                diffView.style.display = 'none';
+            }
+            
+            if (isCorrect) {
+                feedbackArea.className = 'correct';
+            } else {
+                feedbackArea.className = 'incorrect';
+            }
+
+            if (gameMode === 'time-attack') {
+                nextBtn.style.display = 'none';
+                // The timer will continue to run and call endGame when it hits 0
+                if (timer > 0) {
+                     // Automatically move to the next question after a short delay
+                    setTimeout(() => {
+                        gameScreen.style.display = 'flex';
+                        loadQuestion();
+                    }, 2000);
+                }
+            } else {
+                nextBtn.style.display = 'block';
+            }
+        }
+
+        window.nextQuestion = function() {
+            if (questionsToAsk.length > 0) {
+                gameScreen.style.display = 'flex';
+                feedbackArea.style.display = 'none';
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        window.showHint = function() {
+            hintModal.style.display = 'flex';
+            hintModalText.textContent = currentQuiz.explanation;
+        }
+        
+        window.closeHintModal = function() {
+            hintModal.style.display = 'none';
+        }
+        
+        function showMessageModal(title, message) {
+            document.getElementById('message-modal-title').textContent = title;
+            document.getElementById('message-modal-text').textContent = message;
+            messageModal.style.display = 'flex';
+        }
+
+        window.closeMessageModal = function() {
+            messageModal.style.display = 'none';
+        }
+        
+        window.showShareModal = function() {
+            shareLinkInput.value = window.location.href;
+            shareModal.style.display = 'flex';
+        }
+        
+        window.closeShareModal = function() {
+            shareModal.style.display = 'none';
+        }
+        
+        window.copyToClipboard = function() {
+            shareLinkInput.select();
+            document.execCommand('copy');
+            showMessageModal('Copied! ✅', 'The link has been copied to your clipboard.');
+        }
+
+        window.endGame = async function() {
+            if (gameInterval) {
+                clearInterval(gameInterval);
+            }
+            gameScreen.style.display = 'none';
+            feedbackArea.style.display = 'none';
+            endScreen.style.display = 'flex';
+            finalScore.textContent = `${playerName}'s final score: ${score} points!`;
+
+            let rewardMessage = "";
+            let codingTip = "";
+
+            if (score >= 5) {
+                rewardMessage = "🏆 You're a **Debugging Virtuoso**! Top-tier performance.";
+                codingTip = "To keep improving, try focusing on **writing unit tests**. This helps you catch bugs before they even reach production!";
+            } else if (score >= 2) {
+                rewardMessage = "👏 You're a **Junior Debugger**! A solid effort.";
+                codingTip = "A great way to grow is to practice **rubber duck debugging**. Explain your code line by line to an object (or person!) and you'll often find the error yourself.";
+            } else {
+                rewardMessage = "👶 You're a **Coding Novice**, and that's okay!";
+                codingTip = "The best first step is to get familiar with **error messages**. When your code breaks, don't be afraid to read the message carefully—it's often a direct hint!";
+            }
+            
+            rewardMessageEl.innerHTML = rewardMessage;
+            codingTipEl.textContent = codingTip;
+            
+            // Save score to Firestore, but only if Firebase is ready and user is authenticated
+            if (isFirebaseReady && db && userId) {
+                try {
+                    const rewardsCollection = collection(db, `artifacts/${appId}/users/${userId}/rewards`);
+                    await addDoc(rewardsCollection, {
+                        playerName: playerName,
+                        score: score,
+                        level: gameLevel,
+                        mode: gameMode,
+                        timestamp: new Date()
+                    });
+                    console.log("Score saved to Firestore.");
+                    // ONLY load history AFTER a successful save
+                    loadRewardsHistory();
+                } catch (e) {
+                    console.error("Error adding document: ", e);
+                    rewardsHistoryEl.innerHTML = '<p class="text-red-400">Error saving score.</p>';
+                }
+            } else {
+                console.warn("Firestore not ready. Cannot save score.");
+                rewardsHistoryEl.innerHTML = '<p class="text-yellow-400">Cannot load history. Database not connected.</p>';
+            }
+        }
+        
+        async function loadRewardsHistory() {
+            // Ensure Firebase is ready before attempting to load data
+            if (isFirebaseReady && db && userId) {
+                try {
+                    const q = query(collection(db, `artifacts/${appId}/users/${userId}/rewards`));
+                    const querySnapshot = await getDocs(q);
+                    let historyHtml = '<ul class="list-disc list-inside space-y-1">';
+                    if (querySnapshot.empty) {
+                        historyHtml = '<p>No rewards found. Play a game to earn one! 🐞</p>';
+                    } else {
+                        querySnapshot.forEach((doc) => {
+                            const data = doc.data();
+                            const date = data.timestamp.toDate().toLocaleDateString();
+                            historyHtml += `<li>${date} - ${data.score} points (${data.level} ${data.mode})</li>`;
+                        });
+                        historyHtml += '</ul>';
+                    }
+                    rewardsHistoryEl.innerHTML = historyHtml;
+                } catch (e) {
+                    console.error("Error loading history: ", e);
+                    rewardsHistoryEl.innerHTML = '<p class="text-red-400">Error loading history.</p>';
+                }
+            }
+        }
+
+        window.resetGame = function() {
+            // Reset all game variables to their initial state
+            score = 0;
+            timer = 60;
+            currentQuiz = null;
+            questionsToAsk = [];
+            if (gameInterval) {
+                clearInterval(gameInterval);
+            }
+
+            // Show the level selection screen for a fresh start
+            authScreen.style.display = 'none';
+            startScreen.style.display = 'block';
+            modeScreen.style.display = 'none';
+            gameScreen.style.display = 'none';
+            endScreen.style.display = 'none';
+            feedbackArea.style.display = 'none';
+            messageModal.style.display = 'none';
+            shareModal.style.display = 'none';
+        }
+    });
+</script>
+
+</body>
+</html>
